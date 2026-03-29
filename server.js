@@ -56,7 +56,6 @@ app.get("/api/stream/:filename", (req, res) => {
     const range = req.headers.range;
 
     if (!range) {
-      // 📦 Enviar completo (fallback)
       res.writeHead(200, {
         "Content-Length": fileSize,
         "Content-Type": "audio/mpeg",
@@ -66,14 +65,12 @@ app.get("/api/stream/:filename", (req, res) => {
       return;
     }
 
-    // 🎯 STREAM PARCIAL (CLAVE PARA MÓVIL)
     const parts = range.replace(/bytes=/, "").split("-");
     const start = parseInt(parts[0], 10);
     const end = parts[1]
       ? parseInt(parts[1], 10)
       : fileSize - 1;
 
-    // 🛡 VALIDACIÓN
     if (start >= fileSize || end >= fileSize) {
       return res.status(416).send("Requested range not satisfiable");
     }
@@ -105,24 +102,30 @@ app.get("/api/health", (req, res) => {
 });
 
 /* =========================
-   🔌 MONGODB (PRODUCCIÓN)
-========================= */
-const MONGO_URI = process.env.MONGO_URI;
-
-mongoose.connect(MONGO_URI)
-  .then(() => console.log("🟢 MongoDB conectado (Atlas)"))
-  .catch(err => {
-    console.error("❌ Mongo error:", err);
-    process.exit(1); // 🔥 importante en producción
-  });
-
-/* =========================
-   🚀 SERVER START
+   🚀 INICIO CONTROLADO DEL SERVIDOR
 ========================= */
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
-  console.log("\n🚀 SERVIDOR EN PRODUCCIÓN");
-  console.log(`👉 Puerto: ${PORT}`);
-  console.log(`👉 Health: /api/health`);
-});
+const startServer = async () => {
+  try {
+    if (!process.env.MONGO_URI) {
+      throw new Error("MONGO_URI no está definida en variables de entorno");
+    }
+
+    await mongoose.connect(process.env.MONGO_URI);
+
+    console.log("🟢 MongoDB conectado (Atlas)");
+
+    app.listen(PORT, () => {
+      console.log("\n🚀 SERVIDOR EN PRODUCCIÓN");
+      console.log(`👉 Puerto: ${PORT}`);
+      console.log(`👉 Health: /api/health`);
+    });
+
+  } catch (error) {
+    console.error("❌ Error al iniciar servidor:", error);
+    // ❌ NO cerramos el proceso para evitar 502 en Render
+  }
+};
+
+startServer();
