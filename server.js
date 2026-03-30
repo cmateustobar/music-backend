@@ -2,6 +2,7 @@ import express from "express";
 import mongoose from "mongoose";
 import cors from "cors";
 import path from "path";
+import fs from "fs";
 
 import songRoutes from "./routes/songRoutes.js";
 import streamRoutes from "./routes/streamRoutes.js";
@@ -9,7 +10,7 @@ import streamRoutes from "./routes/streamRoutes.js";
 const app = express();
 
 /* =========================
-   🌐 CORS (PRODUCCIÓN READY)
+   🌐 CORS
 ========================= */
 app.use(cors({
   origin: "*",
@@ -22,12 +23,20 @@ app.use(cors({
 app.use(express.json());
 
 /* =========================
+   📁 ASEGURAR CARPETAS (CRÍTICO EN RENDER)
+========================= */
+const uploadsPath = path.join(process.cwd(), "uploads");
+const audioPath = path.join(uploadsPath, "audio");
+
+if (!fs.existsSync(audioPath)) {
+  console.log("📁 Creando carpeta uploads/audio...");
+  fs.mkdirSync(audioPath, { recursive: true });
+}
+
+/* =========================
    📁 ARCHIVOS ESTÁTICOS
 ========================= */
-app.use(
-  "/uploads",
-  express.static(path.join(process.cwd(), "uploads"))
-);
+app.use("/uploads", express.static(uploadsPath));
 
 /* =========================
    🎵 RUTAS API
@@ -35,7 +44,7 @@ app.use(
 app.use("/api/songs", songRoutes);
 
 /* =========================
-   🎧 STREAMING (MODULAR)
+   🎧 STREAMING (PROTEGIDO)
 ========================= */
 app.use("/api/stream", streamRoutes);
 
@@ -51,7 +60,7 @@ app.get("/api/health", (req, res) => {
 });
 
 /* =========================
-   🚀 INICIO CONTROLADO
+   🚀 INICIO SERVIDOR
 ========================= */
 const PORT = process.env.PORT || 5000;
 
@@ -63,18 +72,17 @@ const startServer = async () => {
 
     await mongoose.connect(process.env.MONGO_URI);
 
-    console.log("🟢 MongoDB conectado (Atlas)");
+    console.log("🟢 MongoDB conectado");
 
     app.listen(PORT, () => {
-      console.log("\n🚀 SERVIDOR EN PRODUCCIÓN");
+      console.log("\n🚀 SERVIDOR ACTIVO");
       console.log(`👉 Puerto: ${PORT}`);
       console.log(`👉 Health: /api/health`);
-      console.log(`👉 Streaming: /api/stream/:filename`);
+      console.log(`👉 Stream: /api/stream/:filename`);
     });
 
   } catch (error) {
-    console.error("❌ Error al iniciar servidor:", error);
-    // ⚠️ No cerramos proceso para evitar crash en Render
+    console.error("❌ Error al iniciar:", error);
   }
 };
 
