@@ -45,31 +45,36 @@ export const uploadSong = async (req, res) => {
     res.status(201).json(newSong);
 
   } catch (error) {
-    console.error("❌ Error al subir canción:", error);
+    console.error("❌ Error al subir canción:", error.message);
+
     res.status(500).json({
       message: "Error en servidor",
-      error: error.message
     });
   }
 };
 
 /* =========================
-   🎵 OBTENER CANCIONES (BLINDADO)
+   🎵 OBTENER CANCIONES (ULTRA RESILIENTE)
 ========================= */
 export const getSongs = async (req, res) => {
   try {
     console.log("📡 GET /api/songs");
+
+    // 🔥 SI MONGO NO ESTÁ LISTO → RESPONDE VACÍO
+    if (mongoose.connection.readyState !== 1) {
+      console.warn("⚠️ Mongo no listo");
+      return res.status(200).json([]);
+    }
 
     const songs = await Song.find({}).lean();
 
     res.status(200).json(songs);
 
   } catch (error) {
-    console.error("❌ Error en getSongs:", error);
+    console.error("❌ Error en getSongs:", error.message);
 
     res.status(500).json({
       message: "Error al obtener canciones",
-      error: error.message
     });
   }
 };
@@ -120,7 +125,7 @@ export const deleteSong = async (req, res) => {
     res.json({ message: "Canción eliminada" });
 
   } catch (error) {
-    console.error("❌ Error al eliminar:", error);
+    console.error("❌ Error al eliminar:", error.message);
     res.status(500).json({ message: "Error al eliminar canción" });
   }
 };

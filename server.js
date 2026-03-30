@@ -10,7 +10,7 @@ import streamRoutes from "./routes/streamRoutes.js";
 const app = express();
 
 /* =========================
-   🌐 CORS (COMPATIBLE RENDER)
+   🌐 CORS (SEGURO)
 ========================= */
 app.use(cors({
   origin: "*",
@@ -18,8 +18,6 @@ app.use(cors({
   allowedHeaders: ["Content-Type", "Authorization"],
 }));
 
-// ❌ ELIMINAMOS EL "*"
-// ✅ EXPRESS SAFE
 app.options("/*", cors());
 
 /* =========================
@@ -63,31 +61,35 @@ app.use("/api/stream", streamRoutes);
 app.get("/api/health", (req, res) => {
   res.json({
     status: "ok",
+    mongo: mongoose.connection.readyState,
     uptime: process.uptime(),
   });
 });
 
 /* =========================
-   🚀 START
+   🚀 START (RESILIENTE)
 ========================= */
 const PORT = process.env.PORT || 5000;
 
 const startServer = async () => {
+  // 🔥 EL SERVIDOR ARRANCA SIEMPRE
+  app.listen(PORT, () => {
+    console.log(`🚀 Servidor en puerto ${PORT}`);
+  });
+
   try {
     if (!process.env.MONGO_URI) {
       throw new Error("MONGO_URI no definida");
     }
 
-    await mongoose.connect(process.env.MONGO_URI);
+    await mongoose.connect(process.env.MONGO_URI, {
+      serverSelectionTimeoutMS: 5000,
+    });
 
     console.log("🟢 Mongo conectado");
 
-    app.listen(PORT, () => {
-      console.log(`🚀 Servidor en puerto ${PORT}`);
-    });
-
   } catch (error) {
-    console.error("❌ Error iniciando:", error);
+    console.error("❌ Mongo falló:", error.message);
   }
 };
 
