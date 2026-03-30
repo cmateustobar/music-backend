@@ -10,15 +10,13 @@ import streamRoutes from "./routes/streamRoutes.js";
 const app = express();
 
 /* =========================
-   🌐 CORS (SEGURO)
+   🌐 CORS (CORRECTO)
 ========================= */
 app.use(cors({
   origin: "*",
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  methods: ["GET", "POST", "PUT", "DELETE"],
   allowedHeaders: ["Content-Type", "Authorization"],
 }));
-
-app.options("/*", cors());
 
 /* =========================
    📡 LOGGER
@@ -67,12 +65,12 @@ app.get("/api/health", (req, res) => {
 });
 
 /* =========================
-   🚀 START (RESILIENTE)
+   🚀 START (ESTABLE)
 ========================= */
 const PORT = process.env.PORT || 5000;
 
 const startServer = async () => {
-  // 🔥 EL SERVIDOR ARRANCA SIEMPRE
+  // 🚀 El servidor SIEMPRE arranca
   app.listen(PORT, () => {
     console.log(`🚀 Servidor en puerto ${PORT}`);
   });
