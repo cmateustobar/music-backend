@@ -10,7 +10,7 @@ import streamRoutes from "./routes/streamRoutes.js";
 const app = express();
 
 /* =========================
-   🌐 CORS (ROBUSTO)
+   🌐 CORS (COMPATIBLE RENDER)
 ========================= */
 app.use(cors({
   origin: "*",
@@ -18,10 +18,12 @@ app.use(cors({
   allowedHeaders: ["Content-Type", "Authorization"],
 }));
 
-app.options("*", cors());
+// ❌ ELIMINAMOS EL "*"
+// ✅ EXPRESS SAFE
+app.options("/*", cors());
 
 /* =========================
-   📡 LOGGER (DEBUG PRODUCCIÓN)
+   📡 LOGGER
 ========================= */
 app.use((req, res, next) => {
   console.log(`📡 ${req.method} ${req.url}`);
@@ -72,6 +74,10 @@ const PORT = process.env.PORT || 5000;
 
 const startServer = async () => {
   try {
+    if (!process.env.MONGO_URI) {
+      throw new Error("MONGO_URI no definida");
+    }
+
     await mongoose.connect(process.env.MONGO_URI);
 
     console.log("🟢 Mongo conectado");
