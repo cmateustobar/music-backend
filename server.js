@@ -1,9 +1,10 @@
 import express from "express";
 import mongoose from "mongoose";
 import cors from "cors";
-import fs from "fs";
 import path from "path";
+
 import songRoutes from "./routes/songRoutes.js";
+import streamRoutes from "./routes/streamRoutes.js";
 
 const app = express();
 
@@ -23,7 +24,10 @@ app.use(express.json());
 /* =========================
    📁 ARCHIVOS ESTÁTICOS
 ========================= */
-app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
+app.use(
+  "/uploads",
+  express.static(path.join(process.cwd(), "uploads"))
+);
 
 /* =========================
    🎵 RUTAS API
@@ -31,85 +35,30 @@ app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 app.use("/api/songs", songRoutes);
 
 /* =========================
-   🎧 STREAMING PROFESIONAL
+   🎧 STREAMING (MODULAR)
 ========================= */
-app.get("/api/stream/:filename", (req, res) => {
-  try {
-    const filename = decodeURIComponent(req.params.filename);
-
-    const filePath = path.join(
-      process.cwd(),
-      "uploads",
-      "audio",
-      filename
-    );
-
-    console.log("🎧 Streaming:", filename);
-
-    if (!fs.existsSync(filePath)) {
-      console.error("❌ No existe:", filePath);
-      return res.status(404).json({ message: "Archivo no encontrado" });
-    }
-
-    const stat = fs.statSync(filePath);
-    const fileSize = stat.size;
-    const range = req.headers.range;
-
-    if (!range) {
-      res.writeHead(200, {
-        "Content-Length": fileSize,
-        "Content-Type": "audio/mpeg",
-      });
-
-      fs.createReadStream(filePath).pipe(res);
-      return;
-    }
-
-    const parts = range.replace(/bytes=/, "").split("-");
-    const start = parseInt(parts[0], 10);
-    const end = parts[1]
-      ? parseInt(parts[1], 10)
-      : fileSize - 1;
-
-    if (start >= fileSize || end >= fileSize) {
-      return res.status(416).send("Requested range not satisfiable");
-    }
-
-    const chunkSize = end - start + 1;
-
-    const stream = fs.createReadStream(filePath, { start, end });
-
-    res.writeHead(206, {
-      "Content-Range": `bytes ${start}-${end}/${fileSize}`,
-      "Accept-Ranges": "bytes",
-      "Content-Length": chunkSize,
-      "Content-Type": "audio/mpeg",
-    });
-
-    stream.pipe(res);
-
-  } catch (error) {
-    console.error("❌ Error streaming:", error);
-    res.status(500).json({ message: "Error en streaming" });
-  }
-});
+app.use("/api/stream", streamRoutes);
 
 /* =========================
    🩺 HEALTH CHECK
 ========================= */
 app.get("/api/health", (req, res) => {
-  res.json({ status: "ok", uptime: process.uptime() });
+  res.json({
+    status: "ok",
+    uptime: process.uptime(),
+    timestamp: new Date(),
+  });
 });
 
 /* =========================
-   🚀 INICIO CONTROLADO DEL SERVIDOR
+   🚀 INICIO CONTROLADO
 ========================= */
 const PORT = process.env.PORT || 5000;
 
 const startServer = async () => {
   try {
     if (!process.env.MONGO_URI) {
-      throw new Error("MONGO_URI no está definida en variables de entorno");
+      throw new Error("MONGO_URI no está definida");
     }
 
     await mongoose.connect(process.env.MONGO_URI);
@@ -120,11 +69,12 @@ const startServer = async () => {
       console.log("\n🚀 SERVIDOR EN PRODUCCIÓN");
       console.log(`👉 Puerto: ${PORT}`);
       console.log(`👉 Health: /api/health`);
+      console.log(`👉 Streaming: /api/stream/:filename`);
     });
 
   } catch (error) {
     console.error("❌ Error al iniciar servidor:", error);
-    // ❌ NO cerramos el proceso para evitar 502 en Render
+    // ⚠️ No cerramos proceso para evitar crash en Render
   }
 };
 
