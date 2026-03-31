@@ -10,7 +10,7 @@ import streamRoutes from "./routes/streamRoutes.js";
 const app = express();
 
 /* =========================
-   🌐 CORS (CORRECTO)
+   🌐 CORS (PRODUCCIÓN READY)
 ========================= */
 app.use(cors({
   origin: "*",
@@ -36,10 +36,16 @@ app.use(express.json());
 ========================= */
 const uploadsPath = path.join(process.cwd(), "uploads");
 const audioPath = path.join(uploadsPath, "audio");
+const imagePath = path.join(uploadsPath, "images");
 
 if (!fs.existsSync(audioPath)) {
   console.log("📁 Creando uploads/audio...");
   fs.mkdirSync(audioPath, { recursive: true });
+}
+
+if (!fs.existsSync(imagePath)) {
+  console.log("📁 Creando uploads/images...");
+  fs.mkdirSync(imagePath, { recursive: true });
 }
 
 /* =========================
@@ -65,16 +71,11 @@ app.get("/api/health", (req, res) => {
 });
 
 /* =========================
-   🚀 START (ESTABLE)
+   🚀 START
 ========================= */
 const PORT = process.env.PORT || 5000;
 
 const startServer = async () => {
-  // 🚀 El servidor SIEMPRE arranca
-  app.listen(PORT, () => {
-    console.log(`🚀 Servidor en puerto ${PORT}`);
-  });
-
   try {
     if (!process.env.MONGO_URI) {
       throw new Error("MONGO_URI no definida");
@@ -89,6 +90,10 @@ const startServer = async () => {
   } catch (error) {
     console.error("❌ Mongo falló:", error.message);
   }
+
+  app.listen(PORT, () => {
+    console.log(`🚀 Servidor en puerto ${PORT}`);
+  });
 };
 
 startServer();

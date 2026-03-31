@@ -1,4 +1,5 @@
 import Song from "../models/Song.js";
+import mongoose from "mongoose"; // 🔥 CORRECCIÓN CLAVE
 import fs from "fs/promises";
 import path from "path";
 
@@ -54,13 +55,12 @@ export const uploadSong = async (req, res) => {
 };
 
 /* =========================
-   🎵 OBTENER CANCIONES (ULTRA RESILIENTE)
+   🎵 OBTENER CANCIONES
 ========================= */
 export const getSongs = async (req, res) => {
   try {
     console.log("📡 GET /api/songs");
 
-    // 🔥 SI MONGO NO ESTÁ LISTO → RESPONDE VACÍO
     if (mongoose.connection.readyState !== 1) {
       console.warn("⚠️ Mongo no listo");
       return res.status(200).json([]);
