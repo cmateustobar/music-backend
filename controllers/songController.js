@@ -1,52 +1,80 @@
 import Song from "../models/Song.js";
 import cloudinary from "../config/cloudinary.js";
-import fs from "fs";
 
+/**
+ * 🎵 SUBIR CANCIÓN
+ */
 export const uploadSong = async (req, res) => {
   try {
     const { title, artist } = req.body;
 
-    if (!req.files?.audio || !req.files?.image) {
+    if (!req.files || !req.files.audio || !req.files.image) {
       return res.status(400).json({ msg: "Faltan archivos" });
     }
 
     console.log("🔥 SUBIENDO A CLOUDINARY...");
 
-    // 🎵 AUDIO
+    // 📌 Subir audio
     const audioUpload = await cloudinary.uploader.upload(
       req.files.audio[0].path,
       {
-        resource_type: "video"
+        resource_type: "video", // IMPORTANTE para audio
+        folder: "music/audio",
       }
     );
 
-    // 🖼️ IMAGEN
+    // 📌 Subir imagen
     const imageUpload = await cloudinary.uploader.upload(
-      req.files.image[0].path
+      req.files.image[0].path,
+      {
+        folder: "music/images",
+      }
     );
-
-    console.log("✅ Cloudinary OK");
 
     const newSong = new Song({
       title,
       artist,
       audioUrl: audioUpload.secure_url,
-      coverUrl: imageUpload.secure_url
+      coverUrl: imageUpload.secure_url,
     });
 
     await newSong.save();
 
-    // 🧹 eliminar archivos locales
-    fs.unlinkSync(req.files.audio[0].path);
-    fs.unlinkSync(req.files.image[0].path);
-
     res.status(201).json(newSong);
-
   } catch (error) {
-    console.error("❌ ERROR SUBIENDO:", error);
+    console.error("❌ Error subiendo canción:", error);
+    res.status(500).json({ msg: "Error subiendo canción", error: error.message });
+  }
+};
+
+/**
+ * 📃 OBTENER CANCIONES
+ */
+export const getSongs = async (req, res) => {
+  try {
+    const songs = await Song.find().sort({ createdAt: -1 });
+    res.json(songs);
+  } catch (error) {
+    console.error("❌ Error obteniendo canciones:", error);
+    res.status(500).json({ msg: "Error obteniendo canciones" });
+  }
+};
+
+/**
+ * ❌ ELIMINAR CANCIÓN
+ */
+export const deleteSong = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    await Song.findByIdAndDelete(id);
+
+    res.json({ msg: "Canción eliminada correctamente" });
+  } catch (error) {
+    console.error("❌ Delete error:", error);
     res.status(500).json({
-      msg: "Error subiendo canción",
-      error: error.message
+      msg: "Error eliminando canción",
+      error: error.message,
     });
   }
 };
