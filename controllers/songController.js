@@ -1,131 +1,46 @@
-import Song from "../models/Song.js";
-import mongoose from "mongoose"; // 🔥 CORRECCIÓN CLAVE
-import fs from "fs/promises";
+import fs from "fs";
 import path from "path";
 
-/* =========================
-   🔧 UTILIDAD
-========================= */
-const cleanText = (text) => {
-  if (!text) return "";
-  return text.trim();
-};
+export const streamSong = (req, res) => {
+  const { filename } = req.params;
 
-/* =========================
-   ⬆️ SUBIR CANCIÓN
-========================= */
-export const uploadSong = async (req, res) => {
-  try {
-    const title = cleanText(req.body.title);
-    const artist = cleanText(req.body.artist);
+  const filePath = path.join("uploads/audio", filename);
 
-    const audioFile = req.files?.audio?.[0];
-    const coverFile = req.files?.cover?.[0];
-
-    if (!title) {
-      return res.status(400).json({ message: "El título es obligatorio" });
-    }
-
-    if (!audioFile) {
-      return res.status(400).json({ message: "Audio obligatorio" });
-    }
-
-    const newSong = new Song({
-      title,
-      artist: artist || "Desconocido",
-      audioUrl: `/uploads/audio/${audioFile.filename}`,
-      coverUrl: coverFile
-        ? `/uploads/images/${coverFile.filename}`
-        : "",
-    });
-
-    await newSong.save();
-
-    console.log("✅ Canción guardada:", newSong.title);
-
-    res.status(201).json(newSong);
-
-  } catch (error) {
-    console.error("❌ Error al subir canción:", error.message);
-
-    res.status(500).json({
-      message: "Error en servidor",
-    });
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).json({ msg: "Archivo no encontrado" });
   }
-};
 
-/* =========================
-   🎵 OBTENER CANCIONES
-========================= */
-export const getSongs = async (req, res) => {
-  try {
-    console.log("📡 GET /api/songs");
+  const stat = fs.statSync(filePath);
+  const fileSize = stat.size;
 
-    if (mongoose.connection.readyState !== 1) {
-      console.warn("⚠️ Mongo no listo");
-      return res.status(200).json([]);
-    }
+  const range = req.headers.range;
 
-    const songs = await Song.find({}).lean();
+  if (range) {
+    const parts = range.replace(/bytes=/, "").split("-");
+    const start = parseInt(parts[0], 10);
+    const end = parts[1]
+      ? parseInt(parts[1], 10)
+      : fileSize - 1;
 
-    res.status(200).json(songs);
+    const chunkSize = end - start + 1;
 
-  } catch (error) {
-    console.error("❌ Error en getSongs:", error.message);
+    const file = fs.createReadStream(filePath, { start, end });
 
-    res.status(500).json({
-      message: "Error al obtener canciones",
+    res.writeHead(206, {
+      "Content-Range": `bytes ${start}-${end}/${fileSize}`,
+      "Accept-Ranges": "bytes",
+      "Content-Length": chunkSize,
+      "Content-Type": "audio/mpeg",
     });
-  }
-};
 
-/* =========================
-   🗑 ELIMINAR CANCIÓN
-========================= */
-export const deleteSong = async (req, res) => {
-  try {
-    const { id } = req.params;
+    file.pipe(res);
 
-    const song = await Song.findById(id);
+  } else {
+    res.writeHead(200, {
+      "Content-Length": fileSize,
+      "Content-Type": "audio/mpeg",
+    });
 
-    if (!song) {
-      return res.status(404).json({ message: "Canción no encontrada" });
-    }
-
-    const deleteFile = async (filePath) => {
-      try {
-        await fs.unlink(filePath);
-      } catch {
-        console.warn("⚠️ Archivo no encontrado:", filePath);
-      }
-    };
-
-    if (song.audioUrl) {
-      const audioPath = path.join(
-        process.cwd(),
-        "uploads",
-        "audio",
-        path.basename(song.audioUrl)
-      );
-      await deleteFile(audioPath);
-    }
-
-    if (song.coverUrl) {
-      const coverPath = path.join(
-        process.cwd(),
-        "uploads",
-        "images",
-        path.basename(song.coverUrl)
-      );
-      await deleteFile(coverPath);
-    }
-
-    await Song.findByIdAndDelete(id);
-
-    res.json({ message: "Canción eliminada" });
-
-  } catch (error) {
-    console.error("❌ Error al eliminar:", error.message);
-    res.status(500).json({ message: "Error al eliminar canción" });
+    fs.createReadStream(filePath).pipe(res);
   }
 };
