@@ -12,13 +12,14 @@ const app = express();
    🔥 CORS CONFIGURADO PRO
 ========================= */
 app.use(cors({
-  origin: "*", // ⚠️ en producción puedes restringir
+  origin: [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "https://music-backend-uoko.onrender.com"
+  ],
   methods: ["GET", "POST", "PUT", "DELETE"],
   allowedHeaders: ["Content-Type", "Authorization"],
 }));
-
-// Manejo explícito de preflight (importante para uploads)
-app.options("*", cors());
 
 /* =========================
    🔥 MIDDLEWARES
@@ -47,9 +48,18 @@ mongoose.connect(process.env.MONGO_URI)
 ========================= */
 app.use("/api/songs", songRoutes);
 
-// Health check (clave para Render)
+/* =========================
+   🔥 HEALTH CHECK (RENDER)
+========================= */
 app.get("/", (req, res) => {
   res.send("🎵 API MusicApp funcionando");
+});
+
+/* =========================
+   🔥 404 HANDLER (IMPORTANTE)
+========================= */
+app.use((req, res) => {
+  res.status(404).json({ msg: "Ruta no encontrada" });
 });
 
 /* =========================
