@@ -1,99 +1,28 @@
 import express from "express";
+import dotenv from "dotenv";
 import mongoose from "mongoose";
 import cors from "cors";
-import path from "path";
-import fs from "fs";
-
 import songRoutes from "./routes/songRoutes.js";
-import streamRoutes from "./routes/streamRoutes.js";
+
+dotenv.config(); // 🔥 OBLIGATORIO
 
 const app = express();
 
-/* =========================
-   🌐 CORS (PRODUCCIÓN READY)
-========================= */
-app.use(cors({
-  origin: "*",
-  methods: ["GET", "POST", "PUT", "DELETE"],
-  allowedHeaders: ["Content-Type", "Authorization"],
-}));
-
-/* =========================
-   📡 LOGGER
-========================= */
-app.use((req, res, next) => {
-  console.log(`📡 ${req.method} ${req.url}`);
-  next();
-});
-
-/* =========================
-   📦 MIDDLEWARES
-========================= */
+app.use(cors());
 app.use(express.json());
 
-/* =========================
-   📁 ASEGURAR CARPETAS
-========================= */
-const uploadsPath = path.join(process.cwd(), "uploads");
-const audioPath = path.join(uploadsPath, "audio");
-const imagePath = path.join(uploadsPath, "images");
+// 🔥 DEBUG
+console.log("MONGO_URI:", process.env.MONGO_URI);
 
-if (!fs.existsSync(audioPath)) {
-  console.log("📁 Creando uploads/audio...");
-  fs.mkdirSync(audioPath, { recursive: true });
-}
+// 🔥 CONEXIÓN MONGO
+mongoose.connect(process.env.MONGO_URI)
+  .then(() => console.log("✅ MongoDB conectado"))
+  .catch(err => console.error("❌ Error Mongo:", err));
 
-if (!fs.existsSync(imagePath)) {
-  console.log("📁 Creando uploads/images...");
-  fs.mkdirSync(imagePath, { recursive: true });
-}
-
-/* =========================
-   📁 STATIC
-========================= */
-app.use("/uploads", express.static(uploadsPath));
-
-/* =========================
-   🎵 API
-========================= */
 app.use("/api/songs", songRoutes);
-app.use("/api/stream", streamRoutes);
 
-/* =========================
-   🩺 HEALTH
-========================= */
-app.get("/api/health", (req, res) => {
-  res.json({
-    status: "ok",
-    mongo: mongoose.connection.readyState,
-    uptime: process.uptime(),
-  });
-});
-
-/* =========================
-   🚀 START
-========================= */
 const PORT = process.env.PORT || 5000;
 
-const startServer = async () => {
-  try {
-    if (!process.env.MONGO_URI) {
-      throw new Error("MONGO_URI no definida");
-    }
-
-    await mongoose.connect(process.env.MONGO_URI, {
-      serverSelectionTimeoutMS: 5000,
-    });
-
-    console.log("🟢 Mongo conectado");
-
-  } catch (error) {
-    console.error("❌ Mongo falló:", error.message);
-  }
-
-  app.listen(PORT, () => {
-    console.log(`🚀 Servidor en puerto ${PORT}`);
-  });
-};
-
-startServer();
+app.listen(PORT, () => {
+  console.log(`🚀 Server corriendo en puerto ${PORT}`);
+});
