@@ -6,6 +6,9 @@ import cloudinary from "../config/cloudinary.js";
 ========================= */
 export const uploadSong = async (req, res) => {
   try {
+    // 🔥 FIX CORS (CRÍTICO)
+    res.setHeader("Access-Control-Allow-Origin", "*");
+
     const { title, artist } = req.body;
 
     if (!req.files || !req.files.audio || !req.files.image) {
@@ -36,10 +39,14 @@ export const uploadSong = async (req, res) => {
 
     await newSong.save();
 
-    res.status(201).json(newSong);
+    return res.status(201).json(newSong);
+
   } catch (error) {
     console.error("❌ Error subiendo canción:", error);
-    res.status(500).json({ msg: "Error subiendo canción" });
+
+    return res.status(500).json({
+      msg: "Error subiendo canción",
+    });
   }
 };
 
@@ -48,15 +55,24 @@ export const uploadSong = async (req, res) => {
 ========================= */
 export const getSongs = async (req, res) => {
   try {
+    // 🔥 FIX CORS
+    res.setHeader("Access-Control-Allow-Origin", "*");
+
     const songs = await Song.find().sort({ createdAt: -1 });
-    res.json(songs);
+
+    return res.json(songs);
+
   } catch (error) {
-    res.status(500).json({ msg: "Error obteniendo canciones" });
+    console.error("❌ Error obteniendo canciones:", error);
+
+    return res.status(500).json({
+      msg: "Error obteniendo canciones",
+    });
   }
 };
 
 /* =========================
-   ❌ ELIMINAR (PRO)
+   ❌ ELIMINAR
 ========================= */
 const extractPublicId = (url, folder) => {
   const parts = url.split("/");
@@ -67,10 +83,15 @@ const extractPublicId = (url, folder) => {
 
 export const deleteSong = async (req, res) => {
   try {
+    // 🔥 FIX CORS
+    res.setHeader("Access-Control-Allow-Origin", "*");
+
     const { id } = req.params;
 
     const song = await Song.findById(id);
-    if (!song) return res.status(404).json({ msg: "No encontrada" });
+    if (!song) {
+      return res.status(404).json({ msg: "No encontrada" });
+    }
 
     // 🔥 eliminar en Cloudinary
     if (song.audioUrl) {
@@ -87,9 +108,15 @@ export const deleteSong = async (req, res) => {
 
     await Song.findByIdAndDelete(id);
 
-    res.json({ msg: "Canción eliminada correctamente" });
+    return res.json({
+      msg: "Canción eliminada correctamente",
+    });
+
   } catch (error) {
     console.error("❌ Delete error:", error);
-    res.status(500).json({ msg: "Error eliminando canción" });
+
+    return res.status(500).json({
+      msg: "Error eliminando canción",
+    });
   }
 };

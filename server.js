@@ -9,19 +9,23 @@ dotenv.config();
 const app = express();
 
 /* =========================
-   🔥 CORS CONFIGURADO PRO
+   🔥 CORS DEFINITIVO (PRODUCCIÓN REAL)
 ========================= */
-app.use(cors({
-  origin: [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "https://music-backend-uoko.onrender.com",
-    // 🔥 AGREGA AQUÍ TU FRONTEND CUANDO LO DESPLIEGUES EN VERCEL
-    // "https://tu-app.vercel.app"
-  ],
-  methods: ["GET", "POST", "PUT", "DELETE"],
-  allowedHeaders: ["Content-Type", "Authorization"],
-}));
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Headers", "*");
+  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+
+  // 🔥 Manejo preflight (clave para Vercel)
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(200);
+  }
+
+  next();
+});
+
+// Middleware CORS adicional
+app.use(cors());
 
 /* =========================
    🔥 MIDDLEWARES
@@ -51,7 +55,7 @@ mongoose.connect(process.env.MONGO_URI)
 app.use("/api/songs", songRoutes);
 
 /* =========================
-   🔥 HEALTH CHECK REAL (IMPORTANTE)
+   🔥 HEALTH CHECK
 ========================= */
 app.get("/api/health", (req, res) => {
   res.status(200).json({
@@ -63,7 +67,7 @@ app.get("/api/health", (req, res) => {
 });
 
 /* =========================
-   🔥 ROOT (OPCIONAL)
+   🔥 ROOT
 ========================= */
 app.get("/", (req, res) => {
   res.send("🎵 API MusicApp funcionando");
@@ -77,14 +81,16 @@ app.use((req, res) => {
 });
 
 /* =========================
-   🔥 MANEJO GLOBAL DE ERRORES
+   🔥 ERROR GLOBAL
 ========================= */
 app.use((err, req, res, next) => {
   console.error("💥 ERROR GLOBAL:", err);
 
   res.status(500).json({
     msg: "Error interno del servidor",
-    error: process.env.NODE_ENV === "development" ? err.message : "Internal Server Error",
+    error: process.env.NODE_ENV === "development"
+      ? err.message
+      : "Internal Server Error",
   });
 });
 
