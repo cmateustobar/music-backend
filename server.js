@@ -15,7 +15,9 @@ app.use(cors({
   origin: [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
-    "https://music-backend-uoko.onrender.com"
+    "https://music-backend-uoko.onrender.com",
+    // 🔥 AGREGA AQUÍ TU FRONTEND CUANDO LO DESPLIEGUES EN VERCEL
+    // "https://tu-app.vercel.app"
   ],
   methods: ["GET", "POST", "PUT", "DELETE"],
   allowedHeaders: ["Content-Type", "Authorization"],
@@ -44,19 +46,31 @@ mongoose.connect(process.env.MONGO_URI)
   });
 
 /* =========================
-   🔥 RUTAS
+   🔥 RUTAS API
 ========================= */
 app.use("/api/songs", songRoutes);
 
 /* =========================
-   🔥 HEALTH CHECK (RENDER)
+   🔥 HEALTH CHECK REAL (IMPORTANTE)
+========================= */
+app.get("/api/health", (req, res) => {
+  res.status(200).json({
+    status: "OK",
+    message: "API MusicApp funcionando 🚀",
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString(),
+  });
+});
+
+/* =========================
+   🔥 ROOT (OPCIONAL)
 ========================= */
 app.get("/", (req, res) => {
   res.send("🎵 API MusicApp funcionando");
 });
 
 /* =========================
-   🔥 404 HANDLER (IMPORTANTE)
+   🔥 404 HANDLER
 ========================= */
 app.use((req, res) => {
   res.status(404).json({ msg: "Ruta no encontrada" });
@@ -67,9 +81,10 @@ app.use((req, res) => {
 ========================= */
 app.use((err, req, res, next) => {
   console.error("💥 ERROR GLOBAL:", err);
+
   res.status(500).json({
     msg: "Error interno del servidor",
-    error: err.message,
+    error: process.env.NODE_ENV === "development" ? err.message : "Internal Server Error",
   });
 });
 
