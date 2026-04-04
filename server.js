@@ -2,21 +2,22 @@ import express from "express";
 import dotenv from "dotenv";
 import mongoose from "mongoose";
 import cors from "cors";
+
 import songRoutes from "./routes/songRoutes.js";
+import authRoutes from "./routes/authRoutes.js";
 
 dotenv.config();
 
 const app = express();
 
 /* =========================
-   🔥 CORS DEFINITIVO (PRODUCCIÓN REAL)
+   🔥 CORS DEFINITIVO (PRODUCCIÓN)
 ========================= */
 app.use((req, res, next) => {
   res.header("Access-Control-Allow-Origin", "*");
   res.header("Access-Control-Allow-Headers", "*");
   res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
 
-  // 🔥 Manejo preflight (clave para Vercel)
   if (req.method === "OPTIONS") {
     return res.sendStatus(200);
   }
@@ -24,7 +25,6 @@ app.use((req, res, next) => {
   next();
 });
 
-// Middleware CORS adicional
 app.use(cors());
 
 /* =========================
@@ -38,13 +38,15 @@ app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 ========================= */
 console.log("🌍 Entorno:", process.env.NODE_ENV || "development");
 console.log("🔑 MONGO_URI:", process.env.MONGO_URI ? "OK" : "NO DEFINIDA");
+console.log("🔐 JWT_SECRET:", process.env.JWT_SECRET ? "OK" : "NO DEFINIDA");
 
 /* =========================
    🔥 CONEXIÓN MONGO
 ========================= */
-mongoose.connect(process.env.MONGO_URI)
+mongoose
+  .connect(process.env.MONGO_URI)
   .then(() => console.log("✅ MongoDB conectado"))
-  .catch(err => {
+  .catch((err) => {
     console.error("❌ Error Mongo:", err.message);
     process.exit(1);
   });
@@ -53,6 +55,7 @@ mongoose.connect(process.env.MONGO_URI)
    🔥 RUTAS API
 ========================= */
 app.use("/api/songs", songRoutes);
+app.use("/api/auth", authRoutes);
 
 /* =========================
    🔥 HEALTH CHECK
@@ -88,9 +91,10 @@ app.use((err, req, res, next) => {
 
   res.status(500).json({
     msg: "Error interno del servidor",
-    error: process.env.NODE_ENV === "development"
-      ? err.message
-      : "Internal Server Error",
+    error:
+      process.env.NODE_ENV === "development"
+        ? err.message
+        : "Internal Server Error",
   });
 });
 

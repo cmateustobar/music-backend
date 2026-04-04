@@ -1,17 +1,19 @@
 import jwt from "jsonwebtoken";
 
-export const verifyToken = (req, res, next) => {
-  const header = req.headers.authorization;
-
-  if (!header) return res.status(401).json({ msg: "No token" });
-
-  const token = header.split(" ")[1];
-
+export const protect = (req, res, next) => {
   try {
+    const token = req.headers.authorization?.split(" ")[1];
+
+    if (!token) {
+      return res.status(401).json({ error: "No autorizado" });
+    }
+
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
     req.user = decoded;
     next();
-  } catch (err) {
-    res.status(403).json({ msg: "Token inválido" });
+
+  } catch (error) {
+    res.status(401).json({ error: "Token inválido" });
   }
 };
