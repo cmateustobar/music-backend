@@ -9,12 +9,13 @@ export const uploadSong = async (req, res) => {
   try {
     const { title, artist } = req.body;
 
-    if (!req.files?.audio || !req.files?.image) {
+    // ✅ ACCESO SEGURO (CLAVE)
+    const audioFile = req.files?.audio?.[0];
+    const imageFile = req.files?.image?.[0];
+
+    if (!audioFile || !imageFile) {
       return res.status(400).json({ message: "Faltan archivos" });
     }
-
-    const audioFile = req.files.audio[0];
-    const imageFile = req.files.image[0];
 
     // 🔐 VALIDACIONES
     if (!audioFile.mimetype.startsWith("audio/")) {
@@ -27,7 +28,7 @@ export const uploadSong = async (req, res) => {
 
     // ☁️ SUBIR A CLOUDINARY
     const audioUpload = await cloudinary.uploader.upload(audioFile.path, {
-      resource_type: "video", // audio también usa "video"
+      resource_type: "video", // audio usa tipo video en Cloudinary
       folder: "songs/audio",
     });
 
@@ -43,14 +44,14 @@ export const uploadSong = async (req, res) => {
       coverUrl: imageUpload.secure_url,
     });
 
-    // 🧹 BORRAR ARCHIVOS TEMPORALES
-    fs.unlinkSync(audioFile.path);
-    fs.unlinkSync(imageFile.path);
+    // 🧹 BORRAR ARCHIVOS TEMPORALES (SEGURO)
+    if (fs.existsSync(audioFile.path)) fs.unlinkSync(audioFile.path);
+    if (fs.existsSync(imageFile.path)) fs.unlinkSync(imageFile.path);
 
     res.status(201).json(newSong);
 
   } catch (err) {
-    console.error(err);
+    console.error("❌ ERROR uploadSong:", err);
     res.status(500).json({ message: "Error subiendo canción" });
   }
 };
@@ -63,6 +64,7 @@ export const getSongs = async (req, res) => {
     const songs = await Song.find().sort({ createdAt: -1 });
     res.json(songs);
   } catch (err) {
+    console.error("❌ ERROR getSongs:", err);
     res.status(500).json({ message: err.message });
   }
 };
@@ -83,6 +85,7 @@ export const deleteSong = async (req, res) => {
     res.json({ message: "Eliminada" });
 
   } catch (err) {
+    console.error("❌ ERROR deleteSong:", err);
     res.status(500).json({ message: err.message });
   }
 };
