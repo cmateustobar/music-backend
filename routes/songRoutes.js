@@ -10,7 +10,7 @@ import { protect } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-// 🔐 SUBIDA CORRECTA (CLAVE)
+// 🔐 SUBIDA PROTEGIDA (CLAVE)
 router.post(
   "/upload",
   protect,
@@ -21,10 +21,10 @@ router.post(
   uploadSong
 );
 
-// ❌ ELIMINAR
+// 🔐 ELIMINAR
 router.delete("/:id", protect, deleteSong);
 
-// 🎧 LISTAR
+// 🌐 PÚBLICO
 router.get("/", getSongs);
 
 export default router;
