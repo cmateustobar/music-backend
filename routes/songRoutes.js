@@ -10,17 +10,21 @@ import { protect } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-// 🔐 PROTEGIDAS
-router.post("/upload", protect, upload.fields([
-  { name: "audio", maxCount: 1 },
-  { name: "image", maxCount: 1 }
-]));
+// 🔐 SUBIDA CORRECTA (CLAVE)
+router.post(
+  "/upload",
+  protect,
+  upload.fields([
+    { name: "audio", maxCount: 1 },
+    { name: "image", maxCount: 1 }
+  ]),
+  uploadSong
+);
 
-router.post("/upload", protect, uploadSong);
-
+// ❌ ELIMINAR
 router.delete("/:id", protect, deleteSong);
 
-// 🌐 PÚBLICA
+// 🎧 LISTAR
 router.get("/", getSongs);
 
 export default router;
