@@ -1,5 +1,5 @@
 import Song from "../models/Song.js";
-import cloudinary from "../utils/cloudinary.js";
+import cloudinary from "../config/cloudinary.js"; // ✅ CORRECTO
 import fs from "fs";
 
 // =========================
@@ -9,7 +9,6 @@ export const uploadSong = async (req, res) => {
   try {
     const { title, artist } = req.body;
 
-    // ✅ ACCESO SEGURO (CLAVE)
     const audioFile = req.files?.audio?.[0];
     const imageFile = req.files?.image?.[0];
 
@@ -28,7 +27,7 @@ export const uploadSong = async (req, res) => {
 
     // ☁️ SUBIR A CLOUDINARY
     const audioUpload = await cloudinary.uploader.upload(audioFile.path, {
-      resource_type: "video", // audio usa tipo video en Cloudinary
+      resource_type: "video",
       folder: "songs/audio",
     });
 
@@ -44,7 +43,7 @@ export const uploadSong = async (req, res) => {
       coverUrl: imageUpload.secure_url,
     });
 
-    // 🧹 BORRAR ARCHIVOS TEMPORALES (SEGURO)
+    // 🧹 LIMPIEZA SEGURA
     if (fs.existsSync(audioFile.path)) fs.unlinkSync(audioFile.path);
     if (fs.existsSync(imageFile.path)) fs.unlinkSync(imageFile.path);
 
