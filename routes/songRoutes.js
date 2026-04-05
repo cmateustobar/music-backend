@@ -5,12 +5,15 @@ import {
   deleteSong
 } from "../controllers/songController.js";
 
-import upload from "../middleware/upload.js";
-import { protect } from "../middleware/authMiddleware.js";
+// ✅ RUTAS CORRECTAS (middlewares en plural)
+import upload from "../middlewares/upload.js";
+import { protect } from "../middlewares/auth.js";
 
 const router = express.Router();
 
-// 🔐 SUBIDA PROTEGIDA (CLAVE)
+// =========================
+// 🔐 SUBIR CANCIÓN (PROTEGIDO)
+// =========================
 router.post(
   "/upload",
   protect,
@@ -21,10 +24,14 @@ router.post(
   uploadSong
 );
 
-// 🔐 ELIMINAR
+// =========================
+// 🗑️ ELIMINAR (PROTEGIDO)
+// =========================
 router.delete("/:id", protect, deleteSong);
 
-// 🌐 PÚBLICO
+// =========================
+// 🎧 OBTENER CANCIONES (PÚBLICO)
+// =========================
 router.get("/", getSongs);
 
 export default router;
