@@ -1,91 +1,90 @@
-import Song from "../models/Song.js";
-import cloudinary from "../config/cloudinary.js";
-import fs from "fs";
+import User from "../models/User.js";
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 
 // =========================
-// 📤 SUBIR CANCIÓN
+// 🧪 TEST
 // =========================
-export const uploadSong = async (req, res) => {
+export const testAuth = (req, res) => {
+  res.json({ msg: "Auth funcionando 🚀" });
+};
+
+// =========================
+// 📝 REGISTER
+// =========================
+export const register = async (req, res) => {
   try {
-    const { title, artist } = req.body;
+    const { email, password } = req.body;
 
-    if (!req.files || !req.files.audio || !req.files.image) {
-      return res.status(400).json({
-        error: "Faltan archivos",
-      });
+    // validar
+    if (!email || !password) {
+      return res.status(400).json({ msg: "Datos incompletos" });
     }
 
-    const audioFile = req.files.audio[0];
-    const imageFile = req.files.image[0];
+    // verificar si existe
+    const userExists = await User.findOne({ email });
+    if (userExists) {
+      return res.status(400).json({ msg: "Usuario ya existe" });
+    }
 
-    console.log("🎵 Subiendo a Cloudinary...");
+    // hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-    // subir audio
-    const audioUpload = await cloudinary.uploader.upload(
-      audioFile.path,
-      {
-        resource_type: "video",
-        folder: "music/audio",
-      }
-    );
-
-    // subir imagen
-    const imageUpload = await cloudinary.uploader.upload(
-      imageFile.path,
-      {
-        resource_type: "image",
-        folder: "music/images",
-      }
-    );
-
-    // eliminar archivos locales
-    fs.unlinkSync(audioFile.path);
-    fs.unlinkSync(imageFile.path);
-
-    // guardar en DB
-    const newSong = new Song({
-      title,
-      artist,
-      audioUrl: audioUpload.secure_url,
-      coverUrl: imageUpload.secure_url,
+    const user = new User({
+      email,
+      password: hashedPassword,
     });
 
-    await newSong.save();
+    await user.save();
 
-    console.log("✅ Canción guardada");
-
-    res.status(201).json(newSong);
+    res.status(201).json({ msg: "Usuario creado" });
 
   } catch (error) {
-    console.error("❌ Error upload:", error);
-    res.status(500).json({ error: "Error al subir canción" });
+    console.error(error);
+    res.status(500).json({ msg: "Error en registro" });
   }
 };
 
 // =========================
-// 📥 OBTENER CANCIONES
+// 🔐 LOGIN (ESTO FALTABA)
 // =========================
-export const getSongs = async (req, res) => {
+export const login = async (req, res) => {
   try {
-    const songs = await Song.find().sort({ createdAt: -1 });
-    res.json(songs);
+    const { email, password } = req.body;
+
+    // validar
+    if (!email || !password) {
+      return res.status(400).json({ msg: "Datos incompletos" });
+    }
+
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(400).json({ msg: "Usuario no existe" });
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+
+    if (!isMatch) {
+      return res.status(400).json({ msg: "Contraseña incorrecta" });
+    }
+
+    const token = jwt.sign(
+      { id: user._id },
+      process.env.JWT_SECRET || "secret",
+      { expiresIn: "7d" }
+    );
+
+    res.json({
+      token,
+      user: {
+        id: user._id,
+        email: user.email,
+      },
+    });
+
   } catch (error) {
-    res.status(500).json({ error: "Error al obtener canciones" });
-  }
-};
-
-// =========================
-// 🗑️ ELIMINAR
-// =========================
-export const deleteSong = async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    await Song.findByIdAndDelete(id);
-
-    res.json({ message: "Canción eliminada" });
-
-  } catch (error) {
-    res.status(500).json({ error: "Error al eliminar canción" });
+    console.error(error);
+    res.status(500).json({ msg: "Error en login" });
   }
 };
