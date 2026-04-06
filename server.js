@@ -11,19 +11,41 @@ dotenv.config();
 const app = express();
 
 // =============================
-// MIDDLEWARES
+// 🔐 VALIDACIÓN ENV
 // =============================
-app.use(cors());
-app.use(express.json());
+if (!process.env.MONGO_URI) {
+  console.error("❌ Falta MONGO_URI en variables de entorno");
+  process.exit(1);
+}
 
 // =============================
-// ROUTES
+// 🌐 CORS (PRODUCCIÓN READY)
+// =============================
+app.use(
+  cors({
+    origin: "*", // luego puedes restringir a tu dominio Vercel
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: false,
+  })
+);
+
+// 👇 importante para preflight (POST upload)
+app.options("*", cors());
+
+// =============================
+// 📦 MIDDLEWARES
+// =============================
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// =============================
+// 🚀 ROUTES
 // =============================
 app.use("/api/auth", authRoutes);
 app.use("/api/songs", songRoutes);
 
 // =============================
-// HEALTH CHECK
+// ❤️ HEALTH CHECK
 // =============================
 app.get("/api/health", (req, res) => {
   res.json({
@@ -34,29 +56,38 @@ app.get("/api/health", (req, res) => {
 });
 
 // =============================
-// ERROR HANDLER (IMPORTANTE)
+// ❌ 404 HANDLER
 // =============================
-app.use((err, req, res, next) => {
-  console.error("ERROR GLOBAL:", err);
-  res.status(500).json({ msg: "Error interno del servidor" });
+app.use((req, res) => {
+  res.status(404).json({ msg: "Ruta no encontrada" });
 });
 
 // =============================
-// DB CONNECTION
+// ⚠️ ERROR HANDLER GLOBAL
+// =============================
+app.use((err, req, res, next) => {
+  console.error("🔥 ERROR GLOBAL:", err.stack || err);
+  res.status(err.status || 500).json({
+    msg: err.message || "Error interno del servidor",
+  });
+});
+
+// =============================
+// 🗄️ DB CONNECTION
 // =============================
 mongoose
   .connect(process.env.MONGO_URI)
   .then(() => console.log("MongoDB conectado ✅"))
   .catch((err) => {
-    console.error("Error MongoDB:", err);
-    process.exit(1); // 🔥 importante en producción
+    console.error("❌ Error MongoDB:", err);
+    process.exit(1);
   });
 
 // =============================
-// SERVER
+// 🖥️ SERVER
 // =============================
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
-  console.log(`Servidor corriendo en puerto ${PORT}`);
+  console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
 });

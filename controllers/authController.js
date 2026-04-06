@@ -1,91 +1,91 @@
-import User from "../models/User.js";
-import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
+import Song from "../models/Song.js";
+import cloudinary from "../config/cloudinary.js";
+import fs from "fs";
 
-// =============================
-// TEST
-// =============================
-export const testAuth = (req, res) => {
-  res.json({ msg: "Auth funcionando 🚀" });
-};
-
-// =============================
-// REGISTER
-// =============================
-export const register = async (req, res) => {
+// =========================
+// 📤 SUBIR CANCIÓN
+// =========================
+export const uploadSong = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { title, artist } = req.body;
 
-    // Validación básica
-    if (!email || !password) {
-      return res.status(400).json({ msg: "Email y password son obligatorios" });
+    if (!req.files || !req.files.audio || !req.files.image) {
+      return res.status(400).json({
+        error: "Faltan archivos",
+      });
     }
 
-    // Verificar si ya existe
-    const userExist = await User.findOne({ email });
-    if (userExist) {
-      return res.status(400).json({ msg: "El usuario ya existe" });
-    }
+    const audioFile = req.files.audio[0];
+    const imageFile = req.files.image[0];
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
+    console.log("🎵 Subiendo a Cloudinary...");
 
-    // Crear usuario
-    const user = new User({
-      email,
-      password: hashedPassword,
+    // subir audio
+    const audioUpload = await cloudinary.uploader.upload(
+      audioFile.path,
+      {
+        resource_type: "video",
+        folder: "music/audio",
+      }
+    );
+
+    // subir imagen
+    const imageUpload = await cloudinary.uploader.upload(
+      imageFile.path,
+      {
+        resource_type: "image",
+        folder: "music/images",
+      }
+    );
+
+    // eliminar archivos locales
+    fs.unlinkSync(audioFile.path);
+    fs.unlinkSync(imageFile.path);
+
+    // guardar en DB
+    const newSong = new Song({
+      title,
+      artist,
+      audioUrl: audioUpload.secure_url,
+      coverUrl: imageUpload.secure_url,
     });
 
-    await user.save();
+    await newSong.save();
 
-    res.status(201).json({ msg: "Usuario registrado correctamente" });
+    console.log("✅ Canción guardada");
+
+    res.status(201).json(newSong);
+
   } catch (error) {
-    console.error("Error REGISTER:", error);
-    res.status(500).json({ msg: "Error en el servidor" });
+    console.error("❌ Error upload:", error);
+    res.status(500).json({ error: "Error al subir canción" });
   }
 };
 
-// =============================
-// LOGIN
-// =============================
-export const login = async (req, res) => {
+// =========================
+// 📥 OBTENER CANCIONES
+// =========================
+export const getSongs = async (req, res) => {
   try {
-    const { email, password } = req.body;
-
-    // Validación
-    if (!email || !password) {
-      return res.status(400).json({ msg: "Email y password son obligatorios" });
-    }
-
-    // Buscar usuario
-    const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(400).json({ msg: "Usuario no encontrado" });
-    }
-
-    // Comparar contraseña
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return res.status(400).json({ msg: "Contraseña incorrecta" });
-    }
-
-    // Crear token
-    const token = jwt.sign(
-      { id: user._id },
-      process.env.JWT_SECRET || "secreto123",
-      { expiresIn: "7d" }
-    );
-
-    res.json({
-      msg: "Login exitoso",
-      token,
-      user: {
-        id: user._id,
-        email: user.email,
-      },
-    });
+    const songs = await Song.find().sort({ createdAt: -1 });
+    res.json(songs);
   } catch (error) {
-    console.error("Error LOGIN:", error);
-    res.status(500).json({ msg: "Error en el servidor" });
+    res.status(500).json({ error: "Error al obtener canciones" });
+  }
+};
+
+// =========================
+// 🗑️ ELIMINAR
+// =========================
+export const deleteSong = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    await Song.findByIdAndDelete(id);
+
+    res.json({ message: "Canción eliminada" });
+
+  } catch (error) {
+    res.status(500).json({ error: "Error al eliminar canción" });
   }
 };
