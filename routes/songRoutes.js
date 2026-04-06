@@ -5,19 +5,30 @@ import {
   deleteSong,
 } from "../controllers/songController.js";
 
-import upload from "../middleware/upload.js";
-// ❌ IMPORTANTE: NO usar authMiddleware aquí
+import upload from "../middlewares/upload.js"; // ✅ CORREGIDO (middlewares)
 
 const router = express.Router();
 
-// 🔓 PÚBLICO (para tu app actual)
+// =========================
+// 🎵 OBTENER CANCIONES
+// =========================
 router.get("/", getSongs);
-router.post("/upload", upload.fields([
-  { name: "audio", maxCount: 1 },
-  { name: "image", maxCount: 1 },
-]), uploadSong);
 
-// eliminar también público
+// =========================
+// 📤 SUBIR CANCIÓN
+// =========================
+router.post(
+  "/upload",
+  upload.fields([
+    { name: "audio", maxCount: 1 },
+    { name: "image", maxCount: 1 },
+  ]),
+  uploadSong
+);
+
+// =========================
+// 🗑️ ELIMINAR CANCIÓN
+// =========================
 router.delete("/:id", deleteSong);
 
 export default router;
