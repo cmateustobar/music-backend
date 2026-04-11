@@ -1,24 +1,21 @@
 import express from "express";
 import {
-  uploadSong,
-  getSongs,
   deleteSong,
+  getSongs,
+  importSongFromUrl,
+  uploadBulkSongs,
+  uploadSong,
 } from "../controllers/songController.js";
-
-import upload from "../middlewares/upload.js"; // ✅ CORREGIDO (middlewares)
+import { protect } from "../middlewares/auth.js";
+import upload from "../middlewares/upload.js";
 
 const router = express.Router();
 
-// =========================
-// 🎵 OBTENER CANCIONES
-// =========================
 router.get("/", getSongs);
 
-// =========================
-// 📤 SUBIR CANCIÓN
-// =========================
 router.post(
   "/upload",
+  protect,
   upload.fields([
     { name: "audio", maxCount: 1 },
     { name: "image", maxCount: 1 },
@@ -26,9 +23,18 @@ router.post(
   uploadSong
 );
 
-// =========================
-// 🗑️ ELIMINAR CANCIÓN
-// =========================
-router.delete("/:id", deleteSong);
+router.post(
+  "/upload/bulk",
+  protect,
+  upload.fields([
+    { name: "audios", maxCount: 50 },
+    { name: "image", maxCount: 1 },
+  ]),
+  uploadBulkSongs
+);
+
+router.post("/import-url", protect, importSongFromUrl);
+
+router.delete("/:id", protect, deleteSong);
 
 export default router;
