@@ -168,6 +168,49 @@ export const importSongFromUrl = async (req, res) => {
   }
 };
 
+export const importSongsFromUrls = async (req, res) => {
+  try {
+    const songs = Array.isArray(req.body?.songs) ? req.body.songs : [];
+
+    if (!songs.length) {
+      return res.status(400).json({
+        message: "Envia al menos una cancion para importar",
+      });
+    }
+
+    const sanitizedSongs = songs.map((song, index) => {
+      const title = song.title?.trim();
+      const artist = song.artist?.trim();
+      const album = song.album?.trim() || "";
+      const audioUrl = song.audioUrl?.trim();
+      const coverUrl = song.coverUrl?.trim();
+
+      if (!title || !artist || !audioUrl || !coverUrl) {
+        throw new Error(`Fila ${index + 1}: faltan titulo, artista, audioUrl o coverUrl`);
+      }
+
+      if (!isPublicHttpUrl(audioUrl) || !isPublicHttpUrl(coverUrl)) {
+        throw new Error(`Fila ${index + 1}: las URLs deben empezar por http o https`);
+      }
+
+      return { title, artist, album, audioUrl, coverUrl };
+    });
+
+    const createdSongs = await Song.insertMany(sanitizedSongs, { ordered: true });
+
+    res.status(201).json({
+      message: "Importacion masiva completada",
+      count: createdSongs.length,
+      songs: createdSongs,
+    });
+  } catch (err) {
+    console.error("ERROR importSongsFromUrls:", err);
+    res.status(400).json({
+      message: err.message || "Error importando canciones desde URLs",
+    });
+  }
+};
+
 export const getSongs = async (req, res) => {
   try {
     const songs = await Song.find().sort({ createdAt: -1 });

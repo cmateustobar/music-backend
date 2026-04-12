@@ -3,6 +3,7 @@ import {
   deleteSong,
   getSongs,
   importSongFromUrl,
+  importSongsFromUrls,
   uploadBulkSongs,
   uploadSong,
 } from "../controllers/songController.js";
@@ -34,6 +35,7 @@ router.post(
 );
 
 router.post("/import-url", protect, importSongFromUrl);
+router.post("/import-urls", protect, importSongsFromUrls);
 
 router.delete("/:id", protect, deleteSong);
 
